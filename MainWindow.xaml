@@ -37,9 +37,7 @@
             </Grid.ColumnDefinitions>
             <Slider Grid.Row="0" Grid.Column="0" Orientation="Vertical" Minimum="-10" Maximum="10"/>
             <Slider Grid.Row="2" Grid.Column="0" Orientation="Vertical" Minimum="-10" Maximum="10"/>
-            <ScrollViewer Grid.Column="1" Grid.Row="0" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible" Grid.RowSpan="1" x:Name="Wave_Image_Scroll">
-                <Image Margin="100,0,100000,0" Height="0" Width="0" Stretch="Fill" x:Name="Wave_Image"/>
-            </ScrollViewer>
+            <Image Grid.Row="0" Grid.Column="1" Stretch="Fill" x:Name="Wave_Image" Grid.ColumnSpan="1" Source="/img (20).JPG"/>
             <GridSplitter Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Background="#FFB0B0B0"/>
             <ScrollViewer Grid.Column="1" Grid.Row="2" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible" Grid.RowSpan="1" x:Name="Spectrogram_Image_Scroll">
                 <Image Margin="100,0,100000,0" Height="0" Width="0" Stretch="Fill" x:Name="Spectrogram_Image"/>

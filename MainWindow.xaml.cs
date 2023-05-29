@@ -29,6 +29,7 @@ namespace VoiceAnalyzer
         private WaveFileReader audStream;
         private double bPs;
         private float[] samples;
+        private int spectrogram_span;
         public MainWindow()
         {
             InitializeComponent();
@@ -39,11 +40,8 @@ namespace VoiceAnalyzer
         {
             do
             {
-                current_playback_position.Content = ((double)audStream.Position) / bPs;
                 time_slider.Value = (double)audStream.Position;
-                Wave_Image_Scroll.ScrollToHorizontalOffset((((double)audStream.Position) / bPs + 1) * (double)100 - (double)100);
-                Spectrogram_Image_Scroll.ScrollToHorizontalOffset((((double)audStream.Position) / bPs + 1) * (double)100 - (double)100);
-                await Task.Delay(10);
+                await Task.Delay(1);
             }
             while (sout.PlaybackState == PlaybackState.Playing);
         }
@@ -70,8 +68,9 @@ namespace VoiceAnalyzer
         {
             audStream.Position = (long)time_slider.Value;
             current_playback_position.Content = ((double)audStream.Position) / bPs;
-            Wave_Image_Scroll.ScrollToHorizontalOffset((((double)audStream.Position) / bPs+1) * (double)100 - (double)100);
+            //Wave_Image_Scroll.ScrollToHorizontalOffset((((double)audStream.Position) / bPs+1) * (double)100 - (double)100);
             Spectrogram_Image_Scroll.ScrollToHorizontalOffset((((double)audStream.Position) / bPs + 1) * (double)100 - (double)100);
+            Create_WaveImage();
         }
 
         private void OpenFileButton_Click(object sender, RoutedEventArgs e)
@@ -105,6 +104,7 @@ namespace VoiceAnalyzer
                     audStream.Position = 0;
                     sout.Init(audStream);
                     Create_WaveImage();
+                    Create_SpectrogramImage();
                 }
                 catch (Exception ex)
                 {
@@ -114,36 +114,78 @@ namespace VoiceAnalyzer
         }
         private void Create_WaveImage()
         {
-            int width = samples.Length/20;
-            int height = 500;
+            int width = (int)Wave_Image.ActualWidth;
+            int height = (int)Wave_Image.ActualHeight;
+            Console.WriteLine("WaveImage: "+width.ToString() + " " + height.ToString());
             int dpi = 100;
             WriteableBitmap bitmap = new WriteableBitmap(width, height, dpi, dpi, PixelFormats.Pbgra32, null);
 
-            // 計算用のバイト列の準備
             int pixelsSize = (int)(width * height * 4);
             byte[] pixels = new byte[pixelsSize];
 
-            for (int t = 0; t < samples.Length; t++)
+            for (int t = 0; t < width; t++)
             {
-                int val = (int)(samples[t] * 200) + (int)(height / 2);
-                int index = (t/20 + (val * width)) * 4;
+                int sindex = (int)(t * 30 + ((double)audStream.Position)*0.5);
+                if (sindex>=samples.Length)
+                {
+                    break;
+                }
+                int val = (int)(samples[sindex] * (height*0.3)) + (int)(height / 2);
+                int index = (t + (val * width)) * 4;
                 pixels[index] = 0;
                 pixels[index + 1] = 0;
                 pixels[index + 2] = 0;
                 pixels[index + 3] = 255;
             }
 
-            // バイト列をBitmapImageに変換する
-            int stride = width * 4; // 一行あたりのバイトサイズ
+            int stride = width * 4;
             bitmap.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0, 0);
 
-            // ウィンドウに表示
             Wave_Image.Source = bitmap;
-            Wave_Image.Height = height*2;
-            Wave_Image.Width = width*0.04;
+        }
+        private void Create_SpectrogramImage()
+        {
+            spectrogram_span = 256;
+            int width = samples.Length / spectrogram_span;
+            int height = spectrogram_span;
+            Console.WriteLine("SpectrogramImage: " + width.ToString() + " " + height.ToString());
+            int dpi = 100;
+            WriteableBitmap bitmap = new WriteableBitmap(width, height, dpi, dpi, PixelFormats.Pbgra32, null);
+
+            int pixelsSize = (int)(width * height * 4);
+            byte[] pixels = new byte[pixelsSize];
+
+            for (int x = 0; x < width; x++)
+            {
+                float[] values = dct4(samples, x * spectrogram_span, (x + 1) * spectrogram_span);
+                for (int y = 0; y < height; y++)
+                {
+                    int index = (x + (y * width)) * 4;
+                    pixels[index] = (byte)(values[height-y-1]*100);
+                    pixels[index + 1] = (byte)(values[height - y - 1] *10);
+                    pixels[index + 2] = (byte)(values[height - y - 1] /10);
+                    pixels[index + 3] = 255;
+                }
+            }
+
+            int stride = width * 4;
+            bitmap.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0, 0);
+
             Spectrogram_Image.Source = bitmap;
             Spectrogram_Image.Height = height * 2;
-            Spectrogram_Image.Width = width * 0.04;
+            Spectrogram_Image.Width = width * 2;
+        }
+        private float[] dct4(float[] data,int start,int end)
+        {
+            int N = end-start;
+            float[] ret = new float[N];
+            for (int k=0;k<N;k++)
+            {
+                for (int n=0;n<N;n++) {
+                    ret[k] += (float)Math.Cos( (Math.PI/N)*(n+0.5)*(k+0.5) )*data[start+n];
+                }
+            }
+            return ret;
         }
     }
 }
